@@ -1,25 +1,29 @@
 #!/usr/bin/env julia-0.5
 
-using JSON
+#
+# File discovery
+#
 
-const DIR = "/opt/llvm/llvm-3.9.src/lib/Target/NVPTX"
-const EXTENSIONS = [".c", ".cxx", ".cpp"]
-
-function scan(parent)
+# Recursively scan a directory for matching files
+function scan(dir, extensions)
     sources = Vector{String}()
-    for child in readdir(parent)
-        path = joinpath(parent, child)
+    for entry in readdir(dir)
+        path = joinpath(dir, entry)
         if isdir(path)
-            append!(sources, scan(path))
-        elseif isfile(path) && any(ex->endswith(path, ex), EXTENSIONS)
+            append!(sources, scan(path, extensions))
+        elseif isfile(path) && any(ex->endswith(path, ex), extensions)
             push!(sources, path)
         end
     end
     return sources
 end
 
-abstract Node
 
+#
+# Tree construction
+#
+
+abstract Node
 
 abstract LeafNode <: Node
 
@@ -35,12 +39,8 @@ immutable FileNode <: BranchNode
     path::String
     size::Int
     lines::Int
-    # TODO: includes?
     functions::Dict{String,FunctionNode}
 end
-
-leaves(node::FileNode) = node.functions
-branches(node::FileNode) = Dict{String,BranchNode}()
 
 immutable DirectoryNode <: BranchNode
     files::Dict{String,FileNode}
@@ -49,17 +49,17 @@ immutable DirectoryNode <: BranchNode
     DirectoryNode() = new(Dict{String,FileNode}(), Dict{String,DirectoryNode}())
 end
 
-leaves(node::DirectoryNode) = LeafNode[]
-branches(node::DirectoryNode) = merge(node.files, node.directories)
-
-function add_file!(rootnode::BranchNode, path::String)
+function add_file!(root::DirectoryNode, path::String)
+    # make sure all branches towards the file exist
     dirpath, filename = splitdir(path)
     dirs = split(dirpath, '/')
-
-    fullpath = joinpath(DIR, path)
+    dirnode = root
+    for dir in dirs
+        dirnode = get!(dirnode.directories, dir, DirectoryNode())
+    end
 
     # parse functions and start line (end line = start next function)
-    cmd = pipeline(`ctags -x $fullpath`, `sort -k3 -n`)
+    cmd = pipeline(`ctags -x $path`, `sort -k3 -n`)
     functions = Dict{String, Tuple{Int, Int}}()
     previous = nothing
     for line in readlines(cmd)
@@ -84,7 +84,7 @@ function add_file!(rootnode::BranchNode, path::String)
     # extract code (extremely inefficient, I know)
     functionnodes = Dict{String, FunctionNode}()
     for (fn,range) in functions
-        code = open(readlines, fullpath)
+        code = open(readlines, path)
         if range[2] == 0
             # ctags didn't manage to find the end, so do a quick scan for '}'
             snippet = code[range[1]:end]
@@ -102,19 +102,16 @@ function add_file!(rootnode::BranchNode, path::String)
     end
 
     # gather other info
-    size = stat(fullpath).size
-    lines = length(open(readlines, fullpath))
+    size = stat(path).size
+    lines = length(open(readlines, path))
 
     filenode = FileNode(path, size, lines, functionnodes)
-
-    dirnode = rootnode
-    for dir in dirs
-        dirnode = get!(dirnode.directories, dir, DirectoryNode())
-    end
     dirnode.files[filename] = filenode
+
+    return
 end
 
-function build_tree(sources)
+function Tree(sources)
     root = DirectoryNode()
 
     for path in sources
@@ -125,48 +122,25 @@ function build_tree(sources)
     return root
 end
 
-function visualize{T<:BranchNode}(root::T, indent=0)
-    println(" "^indent, "leaves: ")
-    for (id,node) in leaves(root)
-        println(" "^indent, "- $(typeof(node)): $id")
-        visualize(node, indent+2)
-    end
 
-    println(" "^indent, "branches: ")
-    for (id, node) in branches(root)
-        println(" "^indent, "- $(typeof(node)): $id")
-        visualize(node, indent+2)
-    end
-end
+#
+# Main
+#
 
-function visualize(root::FileNode, indent=0)
-    println(" "^indent, "size: ", root.size)
-    println(" "^indent, "lines: ", root.lines)
+using JSON
 
-    println(" "^indent, "leaves: ")
-    for (id,node) in leaves(root)
-        println(" "^indent, "- $(typeof(node)): $id")
-        visualize(node, indent+2)
-    end
-
-    println(" "^indent, "branches: ")
-    for (id, node) in branches(root)
-        println(" "^indent, "- $(typeof(node)): $id")
-        visualize(node, indent+2)
-    end
-end
-
-function visualize(node::FunctionNode, indent=0)
-    println(" "^indent, "$(length(node.code)) lines of code")
-end
+const DIR = "/opt/llvm/llvm-3.9.src/lib/Target/NVPTX"
+const EXTENSIONS = [".c", ".cxx", ".cpp"]
 
 function main(args)
-    sources = scan(DIR)
-    root = build_tree(sources)
-    visualize(root)
+    sources = scan(DIR, EXTENSIONS)
+
+    tree = cd(DIR) do
+        Tree(sources)
+    end
 
     open("sample.json", "w") do io
-        JSON.print(io, root)
+        JSON.print(io, tree)
     end
 end
 main(ARGS)
