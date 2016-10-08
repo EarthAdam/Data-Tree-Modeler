@@ -1,5 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
+using SimpleJSON;
 
 public class TreeGenerator : MonoBehaviour {
 
@@ -11,17 +13,15 @@ public class TreeGenerator : MonoBehaviour {
 	
 	}
 
-	void Generate(string name, JSONClass jsonData) {
-		files = jsonData["files"];
-		directories = jsonData["directories"];
+	public void Generate(string name, JSONNode jsonData) {
+		files = jsonData["files"] as JSONClass;
+		directories = jsonData["directories"] as JSONClass;
 
-		foreach(KeyValuePair kv in directories) {
-			Tree branch = Instantiate(ForestGenerator.treePrefab, gameObject.transform) as Tree;
-			branch.GetComponent<TreeGenerator>().generate(kv.Key, kv.Value); //send the folder name and subdirectories
+		foreach(KeyValuePair<string, JSONNode> kv in directories) {
+			GameObject branch = Instantiate(ForestGenerator.treePrefab, gameObject.transform) as GameObject;
+			branch.GetComponent<TreeGenerator>().Generate(kv.Key, kv.Value); //send the folder name and subdirectories
 		}
 	}
-
-	static void 
 	
 	// Update is called once per frame
 	void Update () {
