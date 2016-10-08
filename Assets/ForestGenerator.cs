@@ -5,7 +5,9 @@ public class ForestGenerator : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		Instantiate(tree, gameObject.transform);
+		String filePath = "dbgen/sample.json";
+		TextAsset targetFile = Resources.Load<TextAsset>(filePath);
+		GameObject tree = Instantiate(tree, gameObject.transform) as GameObject;
 	}
 	
 	// Update is called once per frame
