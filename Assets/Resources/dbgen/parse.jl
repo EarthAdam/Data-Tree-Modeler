@@ -113,17 +113,17 @@ function add_file!(root::DirectoryNode, path::String)
     return
 end
 
-function Tree(sources)
-    root = DirectoryNode()
+function Tree(root, sources)
+    node = DirectoryNode()
 
     p = Progress(length(sources), 1)
     for path in sources
-        rel = relpath(path, DIR)
-        add_file!(root, rel)
+        rel = relpath(path, root)
+        add_file!(node, rel)
         next!(p)
     end
 
-    return root
+    return node
 end
 
 
@@ -133,14 +133,18 @@ end
 
 using JSON
 
-const DIR = "/opt/llvm/llvm-3.9.src/lib"
 const EXTENSIONS = [".c", ".cxx", ".cpp"]
 
 function main(args)
-    sources = scan(DIR, EXTENSIONS)
+    if length(args) != 1
+        error("Usage: parse.jl SOURCEDIR")
+    end
+    sourcedir = args[1]
+    isdir(sourcedir) || error("$sourcedir isn't a directory")
+    sources = scan(sourcedir, EXTENSIONS)
 
-    tree = cd(DIR) do
-        Tree(sources)
+    tree = cd(sourcedir) do
+        Tree(sourcedir, sources)
     end
 
     open("sample.json", "w") do io
