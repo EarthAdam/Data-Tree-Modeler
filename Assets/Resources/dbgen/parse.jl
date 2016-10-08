@@ -23,6 +23,8 @@ end
 # Tree construction
 #
 
+using ProgressMeter
+
 abstract Node
 
 abstract LeafNode <: Node
@@ -114,9 +116,11 @@ end
 function Tree(sources)
     root = DirectoryNode()
 
+    p = Progress(length(sources), 1)
     for path in sources
         rel = relpath(path, DIR)
         add_file!(root, rel)
+        next!(p)
     end
 
     return root
