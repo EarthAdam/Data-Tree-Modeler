@@ -15,11 +15,12 @@ public class ForestGenerator : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		Tree root = Instantiate(treePrefab, gameObject.transform) as Tree;
+		GameObject root = Instantiate(treePrefab, gameObject.transform) as GameObject;
 		
-		string filePath = "dbgen/sample.json";
+		string filePath = "dbegn/llvm";
 		TextAsset jsonFile = Resources.Load<TextAsset>(filePath);
 		JSONNode jsonData = JSON.Parse(jsonFile.text);
+		Debug.Log(jsonData[""]);
 
 		root.GetComponent<TreeGenerator>().Generate("root", jsonData);
 	}
