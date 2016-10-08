@@ -133,7 +133,7 @@ end
 
 using JSON
 
-const DIR = "/opt/llvm/llvm-3.9.src/lib/Target/NVPTX"
+const DIR = "/opt/llvm/llvm-3.9.src/lib"
 const EXTENSIONS = [".c", ".cxx", ".cpp"]
 
 function main(args)
