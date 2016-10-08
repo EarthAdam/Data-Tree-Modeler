@@ -108,14 +108,9 @@ function create_functions!(parent::Node{FileNode}, repo::String)
     return nodes
 end
 
-function create_file!(parent::Node{DirectoryNode}, path::String)
+function create_file!(root::Node{DirectoryNode}, path::String)
     # make sure all branches towards the file exist
-    dirpath, filename = splitdir(path)
-    dirs = split(dirpath, '/')
-    direct_parent = parent
-    for dir in dirs
-        direct_parent = get!(direct_parent.nodes, dir, Node{DirectoryNode}())
-    end
+    parent, id = create_path!(root, path)
 
     # gather some properties
     size = stat(path).size
@@ -126,7 +121,7 @@ function create_file!(parent::Node{DirectoryNode}, path::String)
     node[:size] = size
     node[:lines] = lines
 
-    direct_parent.nodes[filename] = node
+    parent.nodes[id] = node
     return node
 end
 
@@ -152,21 +147,21 @@ function propagate_info!(node::Node{DirectoryNode})
 end
 
 function Tree(repo, sources)
-    dir = Node{DirectoryNode}()
+    root = Node{DirectoryNode}()
 
     # add leaves to the tree
     p = Progress(length(sources), 1)
     for path in sources
         rel = relpath(path, repo)
-        file = create_file!(dir, rel)
+        file = create_file!(root, rel)
         file.nodes = create_functions!(file, repo)
         next!(p)
     end
 
     # propagate information upwards in a DFS
-    propagate_info!(dir)
+    propagate_info!(root)
 
-    return dir
+    return root
 end
 
 
