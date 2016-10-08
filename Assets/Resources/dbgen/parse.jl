@@ -174,9 +174,19 @@ end
 # Main
 #
 
+import Base: filter!
+
 using JSON
 
 const EXTENSIONS = [".c", ".cxx", ".cpp"]
+
+# Recursively strip a node of certain properties
+function filter!(cb, node::Node)
+    filter!(cb, node.props)
+    for (id,node) in node.nodes
+        filter!(cb, node)
+    end
+end
 
 function main(args)
     if length(args) != 1
@@ -190,8 +200,18 @@ function main(args)
         Tree(repo, sources)
     end
 
-    open("sample.json", "w") do io
-        JSON.print(io, tree)
+    # write to disk, only the info necessary to visualize the tree
+    structure = deepcopy(tree)
+    filter!((k,v) -> k!=:code, structure)
+    open("sample_structure.json", "w") do io
+        JSON.print(io, structure)
+    end
+
+    # write to disk, only the code
+    code = deepcopy(tree)
+    filter!((k,v) -> k==:code, code)
+    open("sample_code.json", "w") do io
+        JSON.print(io, code)
     end
 end
 main(ARGS)
