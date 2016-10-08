@@ -18,7 +18,7 @@ public class TreeGenerator : MonoBehaviour {
 		directories = jsonData["directories"] as JSONClass;
 
 		foreach(KeyValuePair<string, JSONNode> kv in directories) {
-			Tree branch = Instantiate(ForestGenerator.treePrefab, gameObject.transform) as Tree;
+			GameObject branch = Instantiate(ForestGenerator.treePrefab, gameObject.transform) as GameObject;
 			branch.GetComponent<TreeGenerator>().Generate(kv.Key, kv.Value); //send the folder name and subdirectories
 		}
 	}
