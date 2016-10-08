@@ -45,9 +45,11 @@ immutable FileNode <: BranchNode
     functions::Dict{String,FunctionNode}
 end
 
-immutable DirectoryNode <: BranchNode
+type DirectoryNode <: BranchNode
     files::Dict{String,FileNode}
     directories::Dict{String,DirectoryNode}
+    size::Int
+    lines::Int
 
     DirectoryNode() = new(Dict{String,FileNode}(), Dict{String,DirectoryNode}())
 end
@@ -136,15 +138,38 @@ function add_file!(repo::String, parent::DirectoryNode, path::String)
     return
 end
 
+function propagate_info!(node::DirectoryNode)
+    node.lines = 0
+    node.size = 0
+
+    # process all branches
+    for (id, dir) in node.directories
+        propagate_info!(dir)
+
+        node.lines += dir.lines
+        node.size += dir.size
+    end
+
+    # process all leaves
+    if length(node.files) > 0
+        node.lines += sum(pair->pair[2].lines, node.files)
+        node.size += sum(pair->pair[2].size, node.files)
+    end
+end
+
 function Tree(repo, sources)
     node = DirectoryNode()
 
+    # add leaves to the tree
     p = Progress(length(sources), 1)
     for path in sources
         rel = relpath(path, repo)
         add_file!(repo, node, rel)
         next!(p)
     end
+
+    # propagate information upwards in a DFS
+    propagate_info!(node)
 
     return node
 end
