@@ -27,7 +27,7 @@ end
 
 using ProgressMeter
 
-function create_functions!(parent::FileNode, repo::String)
+function create_functions!(parent::Node{FileNode}, repo::String)
     path = parent[:path]
     lines = parent[:lines]
 
@@ -55,9 +55,9 @@ function create_functions!(parent::FileNode, repo::String)
     end
 
     # create function nodes and save range info
-    nodes = Dict{String, FunctionNode}()
+    nodes = Dict{String, Node}()
     for (fn,range) in functions
-        nodes[fn] = FunctionNode()
+        nodes[fn] = Node{FunctionNode}()
         nodes[fn][:range] = range
     end
 
@@ -102,27 +102,26 @@ function create_functions!(parent::FileNode, repo::String)
         f[:mtime] = maximum(times[range[1]:range[2]])
     end
 
-
     for (id, f) in nodes
         parent.nodes[id] = f
     end
     return nodes
 end
 
-function create_file!(parent::DirectoryNode, path::String)
+function create_file!(parent::Node{DirectoryNode}, path::String)
     # make sure all branches towards the file exist
     dirpath, filename = splitdir(path)
     dirs = split(dirpath, '/')
     direct_parent = parent
     for dir in dirs
-        direct_parent = get!(direct_parent.nodes, dir, DirectoryNode())
+        direct_parent = get!(direct_parent.nodes, dir, Node{DirectoryNode}())
     end
 
     # gather some properties
     size = stat(path).size
     lines = length(open(readlines, path))
 
-    node = FileNode()
+    node = Node{FileNode}()
     node[:path] = path
     node[:size] = size
     node[:lines] = lines
@@ -131,12 +130,12 @@ function create_file!(parent::DirectoryNode, path::String)
     return node
 end
 
-function propagate_info!(node::DirectoryNode)
+function propagate_info!(node::Node{DirectoryNode})
     node[:lines] = 0
     node[:size] = 0
 
     # process all director nodes
-    dirs = filter((k,v) -> isa(v, DirectoryNode), node.nodes)
+    dirs = filter((k,v) -> isa(v, Node{DirectoryNode}), node.nodes)
     for (id, dir) in dirs
         propagate_info!(dir)
 
@@ -145,7 +144,7 @@ function propagate_info!(node::DirectoryNode)
     end
 
     # process all file nodes
-    files = filter((k,v) -> isa(v, FileNode), node.nodes)
+    files = filter((k,v) -> isa(v, Node{FileNode}), node.nodes)
     if length(files) > 0
         node[:lines] += sum(pair->pair[2][:lines], files)
         node[:size] += sum(pair->pair[2][:size], files)
@@ -153,7 +152,7 @@ function propagate_info!(node::DirectoryNode)
 end
 
 function Tree(repo, sources)
-    dir = DirectoryNode()
+    dir = Node{DirectoryNode}()
 
     # add leaves to the tree
     p = Progress(length(sources), 1)
