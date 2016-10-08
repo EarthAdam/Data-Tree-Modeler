@@ -19,10 +19,12 @@ public class DrawLine : MonoBehaviour {
 		points[2] = new Vector3(-1,5,0);
 		points[3] = new Vector3(-2,6,1);
 		lineRenderer = GetComponent<LineRenderer>();
-		lineRenderer.SetPosition(0, points[0]);
-		lineRenderer.SetWidth(0.55f,0.45f);
+		lineRenderer.SetPosition(0,points[0]);
+        lineRenderer.SetPosition(1, points[0]);
+        lineRenderer.SetPosition(2, points[0]);
+        lineRenderer.SetPosition(3, points[0]);
+        lineRenderer.SetWidth(0.55f,0.45f);
 
-		dist[0] = 0;
 		for (int i = 1;i<levels;i++){
 			dist[i] = Vector3.Distance(points[i-1], points[i]);
 		}
@@ -32,11 +34,30 @@ public class DrawLine : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 		counter += 0.1f/lineDrawSpeed;
-		for(int i =1;i<=levels;i++){
-			float x = Mathf.Lerp(dist[i-1],dist[i],counter);
-			Vector3 pointAlongLine = x * Vector3.Normalize(points[i]-points[i-1])+points[i-1];
-			lineRenderer.SetPosition(i, pointAlongLine);
+		if (counter<dist[1])
+		{
+			float x = Mathf.Lerp(0,dist[1],counter);
+			Vector3 pointAlongLine = x * Vector3.Normalize((points[1]-points[0])+points[0]);
+			lineRenderer.SetPosition(1, pointAlongLine);
+            lineRenderer.SetPosition(2, pointAlongLine);
+            lineRenderer.SetPosition(3, pointAlongLine);
+        }
+		else if (counter<(dist[1]+dist[2]))
+		{
+			float x = Mathf.Lerp(dist[1],(dist[1]+dist[2]),counter-dist[1]);
+			Vector3 pointAlongLine = x * Vector3.Normalize((points[2]-points[1])+points[1]);
+			lineRenderer.SetPosition(2, pointAlongLine);
+            lineRenderer.SetPosition(3, pointAlongLine);
+            Debug.Log(counter);
 		}
+		else if (counter<(dist[1]+dist[2]+dist[3]))
+		{
+			float x = Mathf.Lerp((dist[1] + dist[2]), (dist[1]+dist[2]+dist[3]),counter-(dist[1]+dist[2]));
+			Vector3 pointAlongLine = x * Vector3.Normalize((points[3]-points[2])+points[2]);
+			lineRenderer.SetPosition(3, pointAlongLine);
+			
+		}
+
 
 	}
 }
