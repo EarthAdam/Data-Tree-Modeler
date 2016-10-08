@@ -5,7 +5,13 @@ using SimpleJSON;
 public class ForestGenerator : MonoBehaviour {
 
 	//perhaps pull out into a 'prefabs cache' type class
-	public static Tree treePrefab = Resources.Load<Tree>("Tree.prefab");
+	public static GameObject treePrefab;
+
+	//runs before start and only once during the lifetime of the script
+	void Awake() {
+ 		treePrefab = Resources.Load<GameObject>("Tree");
+ 		Debug.Log(treePrefab);
+	}
 
 	// Use this for initialization
 	void Start () {
@@ -13,9 +19,9 @@ public class ForestGenerator : MonoBehaviour {
 		
 		string filePath = "dbgen/sample.json";
 		TextAsset jsonFile = Resources.Load<TextAsset>(filePath);
-		var jsonData = JSON.Parse(jsonFile.text);
+		JSONNode jsonData = JSON.Parse(jsonFile.text);
 
-		root.GetComponent<TreeGenerator>().generate(jsonData);
+		root.GetComponent<TreeGenerator>().Generate("root", jsonData);
 	}
 	
 	// Update is called once per frame
