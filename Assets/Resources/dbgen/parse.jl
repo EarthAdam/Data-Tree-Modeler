@@ -1,5 +1,7 @@
 #!/usr/bin/env julia-0.5
 
+include("db.jl")
+
 #
 # File discovery
 #
@@ -25,43 +27,9 @@ end
 
 using ProgressMeter
 
-abstract Node
-
-abstract LeafNode <: Node
-
-immutable FunctionNode
-    range::Tuple{Int,Int}
-    mtime::Int
-    code::String
-end
-
-
-abstract BranchNode <: Node
-
-immutable FileNode <: BranchNode
-    path::String
-    size::Int
-    lines::Int
-    functions::Dict{String,FunctionNode}
-end
-
-type DirectoryNode <: BranchNode
-    files::Dict{String,FileNode}
-    directories::Dict{String,DirectoryNode}
-    size::Int
-    lines::Int
-
-    DirectoryNode() = new(Dict{String,FileNode}(), Dict{String,DirectoryNode}())
-end
-
-function add_file!(repo::String, parent::DirectoryNode, path::String)
-    # make sure all branches towards the file exist
-    dirpath, filename = splitdir(path)
-    dirs = split(dirpath, '/')
-    dirnode = parent
-    for dir in dirs
-        dirnode = get!(dirnode.directories, dir, DirectoryNode())
-    end
+function create_functions!(parent::FileNode, repo::String)
+    path = parent[:path]
+    lines = parent[:lines]
 
     # parse functions and start line (end line = start next function)
     cmd = pipeline(`ctags -x $path`, `sort -k3 -n`)
@@ -86,17 +54,21 @@ function add_file!(repo::String, parent::DirectoryNode, path::String)
         end
     end
 
-    # gather cheap info
-    size = stat(path).size
-    lines = length(open(readlines, path))
+    # create function nodes and save range info
+    nodes = Dict{String, FunctionNode}()
+    for (fn,range) in functions
+        nodes[fn] = FunctionNode()
+        nodes[fn][:range] = range
+    end
 
     # extract code snippets (extremely inefficient, I know)
     snippets = Dict{String,String}()
-    for (fn,range) in functions
+    for (id, f) in nodes
         code = open(readlines, path)
+        range = f[:range]
 
-        # ctags didn't manage to find the end, so do a quick scan for '}'
         if range[2] == 0
+            # ctags didn't manage to find the end, so do a quick scan for '}'
             endline = lines # worst case
 
             snippet = code[range[1]:end]
@@ -111,8 +83,8 @@ function add_file!(repo::String, parent::DirectoryNode, path::String)
             range = tuple(range[1], min(lines, endline))
         end
 
-        functions[fn] = range
-        snippets[fn] = join(code[range[1]:range[2]])
+        f[:range] = range
+        f[:code] = join(code[range[1]:range[2]])
     end
 
     # gather last changed info
@@ -125,53 +97,77 @@ function add_file!(repo::String, parent::DirectoryNode, path::String)
         end
     end
     @assert lines == length(times)
-
-    # create function nodes
-    functionnodes = Dict{String, FunctionNode}()
-    for (fn,range) in functions
-        functionnodes[fn] = FunctionNode(range, maximum(times[range[1]:range[2]]), snippets[fn])
+    for (id, f) in nodes
+        range = f[:range]
+        f[:mtime] = maximum(times[range[1]:range[2]])
     end
 
-    filenode = FileNode(path, size, lines, functionnodes)
-    dirnode.files[filename] = filenode
 
-    return
+    for (id, f) in nodes
+        parent.nodes[id] = f
+    end
+    return nodes
+end
+
+function create_file!(parent::DirectoryNode, path::String)
+    # make sure all branches towards the file exist
+    dirpath, filename = splitdir(path)
+    dirs = split(dirpath, '/')
+    direct_parent = parent
+    for dir in dirs
+        direct_parent = get!(direct_parent.nodes, dir, DirectoryNode())
+    end
+
+    # gather some properties
+    size = stat(path).size
+    lines = length(open(readlines, path))
+
+    node = FileNode()
+    node[:path] = path
+    node[:size] = size
+    node[:lines] = lines
+
+    direct_parent.nodes[filename] = node
+    return node
 end
 
 function propagate_info!(node::DirectoryNode)
-    node.lines = 0
-    node.size = 0
+    node[:lines] = 0
+    node[:size] = 0
 
-    # process all branches
-    for (id, dir) in node.directories
+    # process all director nodes
+    dirs = filter((k,v) -> isa(v, DirectoryNode), node.nodes)
+    for (id, dir) in dirs
         propagate_info!(dir)
 
-        node.lines += dir.lines
-        node.size += dir.size
+        node[:lines] += dir[:lines]
+        node[:size] += dir[:size]
     end
 
-    # process all leaves
-    if length(node.files) > 0
-        node.lines += sum(pair->pair[2].lines, node.files)
-        node.size += sum(pair->pair[2].size, node.files)
+    # process all file nodes
+    files = filter((k,v) -> isa(v, FileNode), node.nodes)
+    if length(files) > 0
+        node[:lines] += sum(pair->pair[2][:lines], files)
+        node[:size] += sum(pair->pair[2][:size], files)
     end
 end
 
 function Tree(repo, sources)
-    node = DirectoryNode()
+    dir = DirectoryNode()
 
     # add leaves to the tree
     p = Progress(length(sources), 1)
     for path in sources
         rel = relpath(path, repo)
-        add_file!(repo, node, rel)
+        file = create_file!(dir, rel)
+        file.nodes = create_functions!(file, repo)
         next!(p)
     end
 
     # propagate information upwards in a DFS
-    propagate_info!(node)
+    propagate_info!(dir)
 
-    return node
+    return dir
 end
 
 
