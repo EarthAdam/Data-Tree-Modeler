@@ -31,6 +31,7 @@ abstract LeafNode <: Node
 
 immutable FunctionNode
     range::Tuple{Int,Int}
+    mtime::Int
     code::String
 end
 
@@ -51,11 +52,11 @@ immutable DirectoryNode <: BranchNode
     DirectoryNode() = new(Dict{String,FileNode}(), Dict{String,DirectoryNode}())
 end
 
-function add_file!(root::DirectoryNode, path::String)
+function add_file!(repo::String, parent::DirectoryNode, path::String)
     # make sure all branches towards the file exist
     dirpath, filename = splitdir(path)
     dirs = split(dirpath, '/')
-    dirnode = root
+    dirnode = parent
     for dir in dirs
         dirnode = get!(dirnode.directories, dir, DirectoryNode())
     end
@@ -83,29 +84,51 @@ function add_file!(root::DirectoryNode, path::String)
         end
     end
 
-    # extract code (extremely inefficient, I know)
-    functionnodes = Dict{String, FunctionNode}()
+    # gather cheap info
+    size = stat(path).size
+    lines = length(open(readlines, path))
+
+    # extract code snippets (extremely inefficient, I know)
+    snippets = Dict{String,String}()
     for (fn,range) in functions
         code = open(readlines, path)
+
+        # ctags didn't manage to find the end, so do a quick scan for '}'
         if range[2] == 0
-            # ctags didn't manage to find the end, so do a quick scan for '}'
+            endline = lines # worst case
+
             snippet = code[range[1]:end]
             for i in 1:length(snippet)
                 if rstrip(snippet[i]) == "}"
                     snippet = snippet[1:i]
-                    range = tuple(range[1], range[1]+i)
+                    endline = range[1]+i
                     break
                 end
             end
-        else
-            snippet = code[range[1]:range[2]]
+
+            range = tuple(range[1], min(lines, endline))
         end
-        functionnodes[fn] = FunctionNode(range, join(snippet))
+
+        functions[fn] = range
+        snippets[fn] = join(code[range[1]:range[2]])
     end
 
-    # gather other info
-    size = stat(path).size
-    lines = length(open(readlines, path))
+    # gather last changed info
+    times = Vector{Int}()
+    for line in readlines(`git -C $repo blame $path --line-porcelain`)
+        time_rt = r"^committer-time (\d+)$"
+        m = match(time_rt, line)
+        if m != nothing
+            push!(times, parse(Int, m.captures[1]))
+        end
+    end
+    @assert lines == length(times)
+
+    # create function nodes
+    functionnodes = Dict{String, FunctionNode}()
+    for (fn,range) in functions
+        functionnodes[fn] = FunctionNode(range, maximum(times[range[1]:range[2]]), snippets[fn])
+    end
 
     filenode = FileNode(path, size, lines, functionnodes)
     dirnode.files[filename] = filenode
@@ -113,13 +136,13 @@ function add_file!(root::DirectoryNode, path::String)
     return
 end
 
-function Tree(root, sources)
+function Tree(repo, sources)
     node = DirectoryNode()
 
     p = Progress(length(sources), 1)
     for path in sources
-        rel = relpath(path, root)
-        add_file!(node, rel)
+        rel = relpath(path, repo)
+        add_file!(repo, node, rel)
         next!(p)
     end
 
@@ -139,12 +162,12 @@ function main(args)
     if length(args) != 1
         error("Usage: parse.jl SOURCEDIR")
     end
-    sourcedir = args[1]
-    isdir(sourcedir) || error("$sourcedir isn't a directory")
-    sources = scan(sourcedir, EXTENSIONS)
+    repo = args[1]
+    isdir(repo) || error("$sourcedir isn't a directory")
+    sources = scan(repo, EXTENSIONS)
 
-    tree = cd(sourcedir) do
-        Tree(sourcedir, sources)
+    tree = cd(repo) do
+        Tree(repo, sources)
     end
 
     open("sample.json", "w") do io
