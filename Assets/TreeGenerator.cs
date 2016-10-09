@@ -5,17 +5,18 @@ using SimpleJSON;
 
 public class TreeGenerator : MonoBehaviour {
 
-	JSONClass nodes;
-
 	int defaultHeight = 2;
 
-	int magnitude = 10;
+	float magnitude = 10;
 	Vector3 dir = new Vector3(Random.Range(0, 1), Random.Range(0, 1), Random.Range(0, 1));
 
 	Transform childTransform;
 
+	Stack<Vector3> path;
 	float minAngle;
 	float maxAngle;
+	float angle;
+	JSONClass nodes;
 
 	// Use this for initialization
 	void Start () {
@@ -27,10 +28,12 @@ public class TreeGenerator : MonoBehaviour {
 		Debug.Log(target);
 	}
 
-	public void Generate(string name, JSONNode jsonData, float minAngle, float maxAngle) {
+	public void Generate(string name, JSONNode jsonData, Stack<Vector3> path, float minAngle, float maxAngle) {
 		gameObject.name = name;
+		this.path = path;
 		this.minAngle = minAngle;
 		this.maxAngle = maxAngle;
+		this.angle = (minAngle + maxAngle) / 2;
 
 		nodes = jsonData["nodes"] as JSONClass;
 
@@ -47,11 +50,15 @@ public class TreeGenerator : MonoBehaviour {
 		float stepAngle = (maxAngle - minAngle) / segments;                  
 		float currAngle = minAngle + (stepAngle / 2);
 		foreach(KeyValuePair<string, JSONNode> kv in nodes) {
+			Stack<Vector3> clone = new Stack<Vector3>(path);
 			GameObject branch = Instantiate(ForestGenerator.treePrefab, gameObject.transform) as GameObject;
-			branch.transform.localPosition = dir * magnitude;
+			
+			Vector3 moveVector = dir * magnitude;
+			Vector3 nextVector = clone.Peek() + moveVector;
+			branch.transform.localPosition = moveVector;
 			branch.GetComponent<TreeGenerator>().Generate(kv.Key, kv.Value, currAngle, currAngle + stepAngle); //send the folder name and subdirectories
 			currAngle += stepAngle;
-			yield return new WaitForSeconds(1f); //new WaitForSeconds(.1f)
+			yield return new WaitForSeconds(0.5f); //new WaitForSeconds(.1f)
 		}
 	}
 }
