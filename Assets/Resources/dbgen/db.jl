@@ -1,3 +1,7 @@
+#
+# Tree hierarchy
+#
+
 using JSON
 
 abstract NodeType
@@ -28,3 +32,19 @@ end
 
 Base.getindex(node::Node, key::Symbol) = node.props[key]
 Base.setindex!(node::Node, val, key::Symbol) = (node.props[key] = val)
+
+
+#
+# Helper methods
+#
+
+function create_path!(root::Node{DirectoryNode}, path::String)
+    dirpath, filename = splitdir(path)
+    dirs = split(dirpath, '/')
+    parent = root
+    for dir in dirs
+        parent = get!(parent.nodes, dir, Node{DirectoryNode}())
+    end
+
+    return parent, filename
+end
