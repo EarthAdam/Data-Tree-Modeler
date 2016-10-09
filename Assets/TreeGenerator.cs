@@ -8,7 +8,7 @@ public class TreeGenerator : MonoBehaviour {
 	int defaultHeight = 2;
 
 	float magnitude = 10;
-	Vector3 dir = new Vector3(Random.Range(0, 1), Random.Range(0, 1), Random.Range(0, 1));
+	private Vector3 dir;
 
 	Transform childTransform;
 
@@ -20,6 +20,8 @@ public class TreeGenerator : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
+		//dir = new Vector3(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
+		dir = new Vector3(0, 1,0);
 		childTransform = gameObject.transform.GetChild(0);
 		//childPrim.setActive(false); //should be disabled in prefab anyway but kept here for safety
 		Vector3 target = dir * magnitude;
@@ -56,7 +58,8 @@ public class TreeGenerator : MonoBehaviour {
 			Vector3 moveVector = dir * magnitude;
 			Vector3 nextVector = clone.Peek() + moveVector;
 			branch.transform.localPosition = moveVector;
-			branch.GetComponent<TreeGenerator>().Generate(kv.Key, kv.Value, currAngle, currAngle + stepAngle); //send the folder name and subdirectories
+			clone.Push(nextVector);
+			branch.GetComponent<TreeGenerator>().Generate(kv.Key, kv.Value, clone, currAngle, currAngle + stepAngle); //send the folder name and subdirectories
 			currAngle += stepAngle;
 			yield return new WaitForSeconds(0.5f); //new WaitForSeconds(.1f)
 		}

@@ -15,8 +15,7 @@ public class ForestGenerator : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		GameObject root = Instantiate(treePrefab) as GameObject;
-        root.transform.parent = gameObject.transform;
+		GameObject root = Instantiate(treePrefab, gameObject.transform) as GameObject;
 		
 		string filePath = "dbgen/llvm_structure";
 		TextAsset jsonFile = Resources.Load<TextAsset>(filePath);
