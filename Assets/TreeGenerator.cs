@@ -53,7 +53,8 @@ public class TreeGenerator : MonoBehaviour {
 		float currAngle = minAngle + (stepAngle / 2);
 		foreach(KeyValuePair<string, JSONNode> kv in nodes) {
 			Stack<Vector3> clone = new Stack<Vector3>(path);
-			GameObject branch = Instantiate(ForestGenerator.treePrefab, gameObject.transform) as GameObject;
+			GameObject branch = Instantiate(ForestGenerator.treePrefab) as GameObject;
+            branch.transform.parent = gameObject.transform;
 			
 			Vector3 moveVector = dir * magnitude;
 			Vector3 nextVector = clone.Peek() + moveVector;
