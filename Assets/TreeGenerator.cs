@@ -5,8 +5,7 @@ using SimpleJSON;
 
 public class TreeGenerator : MonoBehaviour {
 
-	JSONClass files;
-	JSONClass directories;
+	JSONClass nodes;
 
 	// Use this for initialization
 	void Start () {
@@ -14,17 +13,22 @@ public class TreeGenerator : MonoBehaviour {
 	}
 
 	public void Generate(string name, JSONNode jsonData) {
-		files = jsonData["files"] as JSONClass;
-		directories = jsonData["directories"] as JSONClass;
+		gameObject.name = name;
 
-		foreach(KeyValuePair<string, JSONNode> kv in directories) {
-			GameObject branch = Instantiate(ForestGenerator.treePrefab, gameObject.transform) as GameObject;
-			branch.GetComponent<TreeGenerator>().Generate(kv.Key, kv.Value); //send the folder name and subdirectories
-		}
+		nodes = jsonData["nodes"] as JSONClass;
+
+
 	}
 	
 	// Update is called once per frame
 	void Update () {
 	
+	}
+
+	void spawnChildren() {
+		foreach(KeyValuePair<string, JSONNode> kv in nodes) {
+			GameObject branch = Instantiate(ForestGenerator.treePrefab, gameObject.transform) as GameObject;
+			branch.GetComponent<TreeGenerator>().Generate(kv.Key, kv.Value); //send the folder name and subdirectories
+		}
 	}
 }

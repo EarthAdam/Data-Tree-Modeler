@@ -20,10 +20,7 @@ public class DrawLine : MonoBehaviour {
 		points[3] = new Vector3(-2,6,1);
 		lineRenderer = GetComponent<LineRenderer>();
 		lineRenderer.SetPosition(0,points[0]);
-        lineRenderer.SetPosition(1, points[0]);
-        lineRenderer.SetPosition(2, points[0]);
-        lineRenderer.SetPosition(3, points[0]);
-        lineRenderer.SetWidth(0.55f,0.45f);
+        lineRenderer.SetWidth(0.015f,0.005f);
 
 		for (int i = 1;i<levels;i++){
 			dist[i] = Vector3.Distance(points[i-1], points[i]);
@@ -39,16 +36,15 @@ public class DrawLine : MonoBehaviour {
 			float x = Mathf.Lerp(0,dist[1],counter);
 			Vector3 pointAlongLine = x * Vector3.Normalize((points[1]-points[0])+points[0]);
 			lineRenderer.SetPosition(1, pointAlongLine);
-            lineRenderer.SetPosition(2, pointAlongLine);
-            lineRenderer.SetPosition(3, pointAlongLine);
+			lineRenderer.SetPosition(2, pointAlongLine);
+			lineRenderer.SetPosition(3, pointAlongLine);
         }
 		else if (counter<(dist[1]+dist[2]))
 		{
 			float x = Mathf.Lerp(dist[1],(dist[1]+dist[2]),counter-dist[1]);
 			Vector3 pointAlongLine = x * Vector3.Normalize((points[2]-points[1])+points[1]);
 			lineRenderer.SetPosition(2, pointAlongLine);
-            lineRenderer.SetPosition(3, pointAlongLine);
-            Debug.Log(counter);
+			lineRenderer.SetPosition(3, pointAlongLine);
 		}
 		else if (counter<(dist[1]+dist[2]+dist[3]))
 		{
