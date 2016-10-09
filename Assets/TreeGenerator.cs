@@ -10,7 +10,7 @@ public class TreeGenerator : MonoBehaviour {
 	int defaultHeight = 2;
 
 	int magnitude = 10;
-	Vector3 dir = Vector3.up;
+	Vector3 dir = new Vector3(Random.Range(0, 1), Random.Range(0, 1), Random.Range(0, 1));
 
 	Transform childTransform;
 
