@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class DrawLine : MonoBehaviour {
+public class DrawLine04 : MonoBehaviour {
 	private LineRenderer lineRenderer;
 	private float counter;
 	private float[] dist = new float[4];
@@ -14,10 +14,10 @@ public class DrawLine : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		points[0] = new Vector3(0,0,0);
-		points[1] = new Vector3(0,3,0);
-		points[2] = new Vector3(-1,5,0);
-		points[3] = new Vector3(-2,6,1);
+		points[0] = new Vector3(0.2f,0,0.1f);
+		points[1] = new Vector3(0.2f,3,0.1f);
+		points[2] = new Vector3(1,4,2);
+		points[3] = new Vector3(1.4f,6,3.51f);
 		lineRenderer = GetComponent<LineRenderer>();
 		lineRenderer.SetPosition(0,points[0]);
         lineRenderer.SetWidth(0.15f,0.05f);

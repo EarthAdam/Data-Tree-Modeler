@@ -20,7 +20,7 @@ public class DrawLine2 : MonoBehaviour {
 		points[3] = new Vector3(1.4f,6,-1);
 		lineRenderer = GetComponent<LineRenderer>();
 		lineRenderer.SetPosition(0,points[0]);
-        lineRenderer.SetWidth(0.015f,0.005f);
+        lineRenderer.SetWidth(0.15f,0.05f);
 
 		for (int i = 1;i<levels;i++){
 			dist[i] = Vector3.Distance(points[i-1], points[i]);
