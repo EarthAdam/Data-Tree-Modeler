@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using SimpleJSON;
+using System.Collections.Generic;
 
 public class ForestGenerator : MonoBehaviour {
 
@@ -20,7 +21,7 @@ public class ForestGenerator : MonoBehaviour {
 		TextAsset jsonFile = Resources.Load<TextAsset>(filePath);
 		JSONNode jsonData = JSON.Parse(jsonFile.text);
 
-		root.GetComponent<TreeGenerator>().Generate("root", jsonData, 0, 360);
+		root.GetComponent<TreeGenerator>().Generate("root", jsonData, new Stack<Vector3>(), 0, 360);
 	}
 	
 	// Update is called once per frame
