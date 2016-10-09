@@ -10,14 +10,13 @@ public class ForestGenerator : MonoBehaviour {
 	//runs before start and only once during the lifetime of the script
 	void Awake() {
  		treePrefab = Resources.Load<GameObject>("Tree");
- 		Debug.Log(treePrefab);
 	}
 
 	// Use this for initialization
 	void Start () {
-		Tree root = Instantiate(treePrefab, gameObject.transform) as Tree;
+		GameObject root = Instantiate(treePrefab, gameObject.transform) as GameObject;
 		
-		string filePath = "dbgen/sample.json";
+		string filePath = "dbgen/sample_structure";
 		TextAsset jsonFile = Resources.Load<TextAsset>(filePath);
 		JSONNode jsonData = JSON.Parse(jsonFile.text);
 
